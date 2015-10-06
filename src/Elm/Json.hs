@@ -8,10 +8,14 @@ module Elm.Json
     )
 where
 
-import Data.List
-import Data.Maybe
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import           Elm.TyRep
 
-import Elm.TyRep
+lowerInit :: String -> String
+lowerInit (x:xs) = toLower x : xs
+lowerInit [] = []
 
 -- | Compile a JSON parser for an Elm type
 jsonParserForType :: EType -> String
@@ -22,7 +26,7 @@ jsonParserForType ty =
       ETyCon (ETCon "Float") -> "Json.Decode.float"
       ETyCon (ETCon "String") -> "Json.Decode.string"
       ETyCon (ETCon "Bool") -> "Json.Decode.bool"
-      ETyCon (ETCon c) -> "jsonDec" ++ c
+      ETyCon (ETCon c) -> lowerInit c ++ "Decoder"
       ETyApp (ETyCon (ETCon "List")) t' -> "Json.Decode.list (" ++ jsonParserForType t' ++ ")"
       ETyApp (ETyCon (ETCon "Maybe")) t' -> "Json.Decode.maybe (" ++ jsonParserForType t' ++ ")"
       _ ->
@@ -69,7 +73,7 @@ jsonParserForDef etd =
                    ++ ")"
     where
       makeName name =
-           "jsonDec" ++ et_name name ++ " "
+           lowerInit (et_name name) ++ "Decoder "
            ++ unwords (map (\tv -> "localDecoder_" ++ tv_name tv) $ et_args name)
 
 -- | Compile a JSON serializer for an Elm type
@@ -81,7 +85,7 @@ jsonSerForType ty =
       ETyCon (ETCon "Float") -> "Json.Encode.float"
       ETyCon (ETCon "String") -> "Json.Encode.string"
       ETyCon (ETCon "Bool") -> "Json.Encode.bool"
-      ETyCon (ETCon c) -> "jsonEnc" ++ c
+      ETyCon (ETCon c) -> lowerInit c ++ "Encoder"
       ETyApp (ETyCon (ETCon "List")) t' -> "(Json.Encode.list << map " ++ jsonSerForType t' ++ ")"
       ETyApp (ETyCon (ETCon "Maybe")) t' -> "(\v -> case v of Just val -> " ++ jsonSerForType t' ++ " val Nothing -> Json.Encode.null)"
       _ ->
@@ -128,6 +132,6 @@ jsonSerForDef etd =
                 in "   " ++ name ++ " " ++ argList ++ " -> [" ++ intercalate ", " (map mkArg namedArgs) ++ "]"
     where
       makeName name =
-           "jsonEnc" ++ et_name name ++ " "
+           lowerInit (et_name name) ++ "Encoder "
            ++ unwords (map (\tv -> "localEncoder_" ++ tv_name tv) $ et_args name)
            ++ " val"
